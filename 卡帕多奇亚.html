@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>卡帕多奇亚红绿线全图 (一键运行版)</title>
+  
+  <!-- MapLibre 核心库 -->
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    #map { height: 100%; width: 100%; }
+    .ui-panel {
+      position: absolute; top: 15px; left: 15px; z-index: 10;
+      background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 320px;
+      font: 13px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .ui-panel b { font-size: 15px; display: block; margin-bottom: 8px; color: #1e293b; }
+    .filter-group { margin-bottom: 12px; }
+    .btn {
+      display: inline-block; padding: 4px 10px; margin: 3px 4px 0 0;
+      border: 1px solid #e2e8f0; background: #fff; border-radius: 20px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    .legend-item { display: flex; align-items: center; margin-top: 5px; font-size: 11px; color: #64748b; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="ui-panel">
+  <b>卡帕多奇亚路线概览</b>
+  
+  <div class="filter-group">
+    <div style="margin-bottom:5px; font-weight:600;">选择天数：</div>
+    <div id="day-filters">
+      <span class="btn active" data-day="all">全选</span>
+      <span class="btn" data-day="1">Day 1 (红线)</span>
+      <span class="btn" data-day="2">Day 2 (绿线)</span>
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <div style="margin-bottom:5px; font-weight:600;">图例说明：</div>
+    <div class="legend-item"><div class="dot" style="background:#ef4444;"></div> 核心景点 (Sight)</div>
+    <div class="legend-item"><div class="dot" style="background:#f59e0b;"></div> 最佳观景 (View)</div>
+    <div class="legend-item"><div class="dot" style="background:#8b5cf6;"></div> 地下城 (Underground)</div>
+    <div class="legend-item"><div class="dot" style="background:#10b981;"></div> 自然峡谷 (Park)</div>
+  </div>
+  
+  <div style="font-size:11px; color:#94a3b8; border-top:1px solid #f1f5f9; pt-8px; mt-8px;">
+    * 点击地图上的点查看详细建议。<br>
+    * 线路为示意性逻辑连接，非真实导航。
+  </div>
+</div>
+
+<script>
+  // 1. 数据定义 (GeoJSON) - 已补全所有缺失坐标
+  const tripData = {
+    "type": "FeatureCollection",
+    "features": [
+      // Day 1: 红线/北部核心 (以 Goreme 为圆心周边)
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8270, 38.6431] }, "properties": { "name": "格雷梅小镇 (起点)", "local": "Göreme", "cat": "start", "day": 1, "tips": "住宿与暴走的中心基点。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8449, 38.6399] }, "properties": { "name": "格雷梅露天博物馆", "local": "Göreme Open Air Museum", "cat": "sight", "day": 1, "tips": "壁画精美，建议08:30进场避开团客。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8551, 38.6768] }, "properties": { "name": "僧侣谷 (香菇岩)", "local": "Paşabağ", "cat": "sight", "day": 1, "tips": "典型的三头石柱地貌，拍照极佳。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8690, 38.6720] }, "properties": { "name": "想象谷 (骆驼岩)", "local": "Devrent Valley", "cat": "sight", "day": 1, "tips": "石头形状全靠想象力，就在马路边。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8220, 38.6610] }, "properties": { "name": "爱之谷观景点", "local": "Love Valley", "cat": "view", "day": 1, "tips": "石柱形状独特，日落时光影很有趣。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8060, 38.6302] }, "properties": { "name": "乌奇萨城堡", "local": "Uçhisar Castle", "cat": "view", "day": 1, "tips": "全区最高点，建议傍晚登顶俯瞰。" } },
+
+      // Day 2: 绿线/南部核心 (较远，建议跟团)
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.7351, 38.3735] }, "properties": { "name": "代林库尤地下城", "local": "Derinkuyu", "cat": "underground", "day": 2, "tips": "规模最大的地下城，深达8层。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.2922, 38.2611] }, "properties": { "name": "伊赫拉拉峡谷", "local": "Ihlara Valley", "cat": "park", "day": 2, "tips": "绿洲徒步，环境清幽，需走3-4km。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.2568, 38.3033] }, "properties": { "name": "塞利梅修道院", "local": "Selime Monastery", "cat": "sight", "day": 2, "tips": "星球大战取景感，结构宏大。" } },
+      { "type": "Feature", "geometry": { "type": "Point", "coordinates": [34.8131, 38.6304] }, "properties": { "name": "鸽子谷", "local": "Pigeon Valley", "cat": "view", "day": 2, "tips": "有很多鸽舍洞穴，连接Göreme和Uçhisar。" } },
+
+      // 示意线路
+      { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[34.8270,38.6431],[34.8449,38.6399],[34.8551,38.6768],[34.8690,38.6720]] }, "properties": { "day": 1, "type": "route" } },
+      { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[34.8270,38.6431],[34.7351,38.3735],[34.2922,38.2611],[34.2568,38.3033]] }, "properties": { "day": 2, "type": "route" } }
+    ]
+  };
+
+  // 2. 初始化地图
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        'osm': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors'
+        }
+      },
+      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+    },
+    center: [34.8, 38.5],
+    zoom: 10
+  });
+
+  map.on('load', () => {
+    // 添加数据源
+    map.addSource('trip', { type: 'geojson', data: tripData });
+
+    // 线路图层
+    map.addLayer({
+      id: 'route-layer',
+      type: 'line',
+      source: 'trip',
+      filter: ['==', '$type', 'LineString'],
+      paint: { 'line-color': '#3b82f6', 'line-width': 3, 'line-dasharray': [2, 1], 'line-opacity': 0.6 }
+    });
+
+    // 景点图层
+    map.addLayer({
+      id: 'poi-layer',
+      type: 'circle',
+      source: 'trip',
+      filter: ['==', '$type', 'Point'],
+      paint: {
+        'circle-radius': 8,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+        'circle-color': [
+          'match', ['get', 'cat'],
+          'sight', '#ef4444',
+          'view', '#f59e0b',
+          'underground', '#8b5cf6',
+          'park', '#10b981',
+          '#64748b'
+        ]
+      }
+    });
+
+    // 交互：点击弹出详情
+    map.on('click', 'poi-layer', (e) => {
+      const p = e.features[0].properties;
+      new maplibregl.Popup({ closeButton: false })
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <div style="padding:5px;">
+            <strong style="font-size:14px;">${p.name}</strong><br>
+            <small style="color:#666;">${p.local}</small><hr style="margin:5px 0; border:0; border-top:1px solid #eee;">
+            <div style="font-size:12px;">${p.tips}</div>
+          </div>
+        `)
+        .addTo(map);
+    });
+
+    // 鼠标样式切换
+    map.on('mouseenter', 'poi-layer', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'poi-layer', () => map.getCanvas().style.cursor = '');
+
+    // 过滤器逻辑
+    document.getElementById('day-filters').addEventListener('click', (e) => {
+      if (!e.target.classList.contains('btn')) return;
+      
+      document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      const day = e.target.dataset.day;
+      const filterArr = day === 'all' 
+        ? ['all'] 
+        : ['all', ['==', ['get', 'day'], parseInt(day)]];
+      
+      map.setFilter('poi-layer', ['all', ['==', '$type', 'Point'], ...filterArr]);
+      map.setFilter('route-layer', ['all', ['==', '$type', 'LineString'], ...filterArr]);
+    });
+
+    // 自动缩放以包含所有点
+    const bounds = new maplibregl.LngLatBounds();
+    tripData.features.forEach(f => {
+      if (f.geometry.type === 'Point') bounds.extend(f.geometry.coordinates);
+    });
+    map.fitBounds(bounds, { padding: 50 });
+  });
+</script>
+
+</body>
+</html>
