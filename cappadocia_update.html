@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡帕多西亚2天1晚旅行地图</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .filter-control {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .filter-control label { margin-right: 10px; }
+        .filter-control select { margin-right: 15px; padding: 5px; }
+        .maplibregl-popup { max-width: 300px; }
+    </style>
+</head>
+<body>
+    <div class="filter-control">
+        <label for="day-filter">按天数过滤：</label>
+        <select id="day-filter">
+            <option value="all">全部天数</option>
+            <option value="1">Day 1</option>
+            <option value="2">Day 2</option>
+        </select>
+        
+        <label for="category-filter">按类别过滤：</label>
+        <select id="category-filter">
+            <option value="all">全部类别</option>
+            <option value="人文遗迹">人文遗迹</option>
+            <option value="自然景观">自然景观</option>
+            <option value="餐饮">餐饮</option>
+            <option value="观景点">观景点</option>
+            <option value="购物">购物</option>
+            <option value="交通枢纽">交通枢纽</option>
+            <option value="住宿区">住宿区</option>
+            <option value="人文遗迹（雨天备选）">人文遗迹（雨天备选）</option>
+            <option value="服务设施">服务设施</option>
+            <option value="夜间活动">夜间活动</option>
+            <option value="服务设施（雨天备选）">服务设施（雨天备选）</option>
+        </select>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        // 初始化地图
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: {
+                version: 8,
+                sources: {
+                    'osm-tiles': {
+                        type: 'raster',
+                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '© OpenStreetMap contributors'
+                    }
+                },
+                layers: [
+                    {
+                        id: 'osm-layer',
+                        type: 'raster',
+                        source: 'osm-tiles'
+                    }
+                ]
+            },
+            center: [34.8267, 38.6492], // 格雷梅镇中心坐标
+            zoom: 11
+        });
+
+        // 旅行规划GeoJSON数据（内嵌，无需单独JSON文件）
+        const tripData = {
+            "type": "FeatureCollection",
+            "features": [
+                // Day 1 路线 LineString
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "day": 1,
+                        "route_name": "Day 1 核心游览路线"
+                    },
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [34.8267, 38.6492], // 格雷梅洞穴酒店区
+                            [34.8285, 38.6512], // 格雷梅露天博物馆
+                            [34.8290, 38.6515], // 博物馆周边小吃摊
+                            [34.8292, 38.6516], // 果汁摊
+                            [34.8145, 38.6378], // 帕夏巴格谷
+                            [34.7982, 38.6450], // 红谷
+                            [34.8267, 38.6492], // 格雷梅镇中心餐厅
+                            [34.8275, 38.6485], // 土耳其之夜表演场地
+                            [34.8300, 38.6520]  // 格雷梅星空观测点
+                        ]
+                    }
+                },
+                // Day 2 路线 LineString
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "day": 2,
+                        "route_name": "Day 2 核心游览路线"
+                    },
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [34.8267, 38.6492], // 格雷梅洞穴酒店区
+                            [34.8255, 38.6488], // 当地面包房
+                            [34.8572, 38.6689], // 乌其萨尔城堡
+                            [34.8580, 38.6695], // 乌其萨尔巴士站
+                            [34.7890, 38.6530], // 泽尔夫露天博物馆
+                            [34.7895, 38.6532], // 泽尔夫周边咖啡馆
+                            [34.8050, 38.6380], // 魔法谷
+                            [34.8100, 38.6350], // 鸽子谷
+                            [34.8000, 38.6300], // 爱情谷观景台
+                            [34.8267, 38.6492], // 格雷梅手工艺品店
+                            [34.8260, 38.6485], // 格雷梅镇中心咖啡馆
+                            [34.8250, 38.6480]  // 格雷梅巴士站
+                        ]
+                    }
+                },
+                // POI Point 特征（完整26个POI）
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 1,
+                        "name_zh": "格雷梅露天博物馆",
+                        "name_local": "Göreme Açık Hava Müzesi",
+                        "category": "人文遗迹",
+                        "day": 1,
+                        "time_block": "Morning",
+                        "duration_min": 180,
+                        "cost_level": 2,
+                        "crowd_level": 3,
+                        "best_time": "08:00-10:00",
+                        "tips": "洞内禁止拍照，建议提前了解宗教遗迹背景",
+                        "must_visit": true
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8285, 38.6512]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 2,
+                        "name_zh": "乌其萨尔城堡",
+                        "name_local": "Uçhisar Kalesi",
+                        "category": "人文遗迹",
+                        "day": 2,
+                        "time_block": "Morning",
+                        "duration_min": 90,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "08:00-09:30",
+                        "tips": "登顶需攀爬台阶，穿舒适运动鞋",
+                        "must_visit": true
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8572, 38.6689]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 3,
+                        "name_zh": "帕夏巴格谷（僧侣谷）",
+                        "name_local": "Paşabağı Vadisi",
+                        "category": "自然景观",
+                        "day": 1,
+                        "time_block": "Afternoon",
+                        "duration_min": 120,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "13:30-15:30",
+                        "tips": "风大注意防风，适合拍摄童话烟囱全景",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8145, 38.6378]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 4,
+                        "name_zh": "红谷",
+                        "name_local": "Kızıl Vadisi",
+                        "category": "自然景观",
+                        "day": 1,
+                        "time_block": "Afternoon",
+                        "duration_min": 120,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "15:30-17:30",
+                        "tips": "日落前1小时光线最佳，提前占据观景点",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.7982, 38.6450]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 5,
+                        "name_zh": "泽尔夫露天博物馆",
+                        "name_local": "Zelve Açık Hava Müzesi",
+                        "category": "人文遗迹",
+                        "day": 2,
+                        "time_block": "Morning",
+                        "duration_min": 120,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "09:40-11:40",
+                        "tips": "部分洞穴通道狭窄，注意避让行人",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.7890, 38.6530]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 6,
+                        "name_zh": "魔法谷",
+                        "name_local": "Büyülü Vadisi",
+                        "category": "自然景观",
+                        "day": 2,
+                        "time_block": "Afternoon",
+                        "duration_min": 120,
+                        "cost_level": 1,
+                        "crowd_level": 1,
+                        "best_time": "13:40-15:40",
+                        "tips": "山谷内信号较弱，建议提前下载离线地图",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8050, 38.6380]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 7,
+                        "name_zh": "格雷梅星空观测点",
+                        "name_local": "Göreme Gökkuşağı Gözlem Noktası",
+                        "category": "观景点",
+                        "day": 1,
+                        "time_block": "Evening",
+                        "duration_min": 40,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "22:40-23:20",
+                        "tips": "夜间温差大，注意保暖，可携带星空拍摄装备",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8300, 38.6520]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 8,
+                        "name_zh": "博物馆周边小吃摊",
+                        "name_local": "Müze Çevresi Yemek Satıcıları",
+                        "category": "餐饮",
+                        "day": 1,
+                        "time_block": "Morning",
+                        "duration_min": 50,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "11:40-12:30",
+                        "tips": "建议选择当地人多的摊位，食材更新鲜",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8290, 38.6515]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 9,
+                        "name_zh": "格雷梅镇中心餐厅（安纳托利亚风味）",
+                        "name_local": "Göreme Merkezi Restoran（Anadolu Lezzetleri）",
+                        "category": "餐饮",
+                        "day": 1,
+                        "time_block": "Evening",
+                        "duration_min": 90,
+                        "cost_level": 2,
+                        "crowd_level": 3,
+                        "best_time": "18:30-20:00",
+                        "tips": "推荐尝试陶罐炖肉，需提前告知服务员辣度偏好",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8267, 38.6492]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 10,
+                        "name_zh": "泽尔夫周边咖啡馆",
+                        "name_local": "Zelve Çevresi Kahvaltı Salonu",
+                        "category": "餐饮",
+                        "day": 2,
+                        "time_block": "Morning",
+                        "duration_min": 50,
+                        "cost_level": 1,
+                        "crowd_level": 1,
+                        "best_time": "11:50-12:40",
+                        "tips": "土耳其咖啡偏浓，可要求加糖",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.7895, 38.6532]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 11,
+                        "name_zh": "格雷梅镇中心咖啡馆",
+                        "name_local": "Göreme Merkezi Kahve Evi",
+                        "category": "餐饮",
+                        "day": 2,
+                        "time_block": "Evening",
+                        "duration_min": 50,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "19:10-20:00",
+                        "tips": "提供特色甜点，适合行程结束前放松休憩",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8260, 38.6485]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 12,
+                        "name_zh": "格雷梅手工艺品店",
+                        "name_local": "Göreme El Sanatları Dükkanı",
+                        "category": "购物",
+                        "day": 2,
+                        "time_block": "Afternoon",
+                        "duration_min": 60,
+                        "cost_level": 2,
+                        "crowd_level": 2,
+                        "best_time": "17:00-18:00",
+                        "tips": "可适度讲价，建议购买小饰品作为纪念",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8267, 38.6492]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 13,
+                        "name_zh": "内夫谢希尔卡帕多奇亚机场",
+                        "name_local": "Nevşehir Kapadokya Havalimanı",
+                        "category": "交通枢纽",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 60,
+                        "cost_level": 3,
+                        "crowd_level": 3,
+                        "best_time": "航班起降前1小时",
+                        "tips": "机场到格雷梅镇车程约30分钟，可拼车前往",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.5417, 38.6286]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 14,
+                        "name_zh": "格雷梅巴士站",
+                        "name_local": "Göreme Otogarı",
+                        "category": "交通枢纽",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 30,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "08:00-18:00",
+                        "tips": "迷你巴士无固定站牌，可询问酒店前台乘车点",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8250, 38.6480]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 15,
+                        "name_zh": "乌其萨尔巴士站",
+                        "name_local": "Uçhisar Otogarı",
+                        "category": "交通枢纽",
+                        "day": 2,
+                        "time_block": "Morning",
+                        "duration_min": 15,
+                        "cost_level": 1,
+                        "crowd_level": 1,
+                        "best_time": "09:30-09:40",
+                        "tips": "乘车前确认目的地，避免坐错方向",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8580, 38.6695]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 16,
+                        "name_zh": "格雷梅洞穴酒店区",
+                        "name_local": "Göreme Mağara Otelleri Bölgesi",
+                        "category": "住宿区",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": null,
+                        "cost_level": 2,
+                        "crowd_level": 2,
+                        "best_time": "全天",
+                        "tips": "提前网上预订可享受优惠，优先选择带露台的房间",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8267, 38.6492]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 17,
+                        "name_zh": "乌其萨尔小镇住宿区",
+                        "name_local": "Uçhisar Köyü Konaklama Bölgesi",
+                        "category": "住宿区",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": null,
+                        "cost_level": 2,
+                        "crowd_level": 1,
+                        "best_time": "全天",
+                        "tips": "靠近乌其萨尔城堡，环境安静，适合偏好静谧氛围的游客",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8570, 38.6680]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 18,
+                        "name_zh": "凯马克勒地下城",
+                        "name_local": "Kaymaklı Yer Altı Şehri",
+                        "category": "人文遗迹（雨天备选）",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 120,
+                        "cost_level": 2,
+                        "crowd_level": 2,
+                        "best_time": "09:00-16:00",
+                        "tips": "地下通道狭窄昏暗，建议携带手电筒",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.9100, 38.6350]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 19,
+                        "name_zh": "格雷梅镇中心游客中心",
+                        "name_local": "Göreme Merkezi Turist Merkezi",
+                        "category": "服务设施（雨天备选）",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 40,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "09:00-17:00",
+                        "tips": "提供行程咨询、景点讲解服务，室内空间可避雨",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8255, 38.6490]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 20,
+                        "name_zh": "土耳其之夜表演场地",
+                        "name_local": "Türk Gecesi Gösteri Sahası",
+                        "category": "夜间活动",
+                        "day": 1,
+                        "time_block": "Evening",
+                        "duration_min": 150,
+                        "cost_level": 2,
+                        "crowd_level": 3,
+                        "best_time": "20:10-22:40",
+                        "tips": "建议提前预订座位，部分场地含晚餐套餐",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8275, 38.6485]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 21,
+                        "name_zh": "爱情谷观景台",
+                        "name_local": "Aşk Vadisi Manzarası Noktası",
+                        "category": "观景点",
+                        "day": 2,
+                        "time_block": "Afternoon",
+                        "duration_min": 60,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "17:00-18:00",
+                        "tips": "傍晚光线柔和，适合拍摄爱情谷全景",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8000, 38.6300]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 22,
+                        "name_zh": "鸽子谷",
+                        "name_local": "Güvercin Vadisi",
+                        "category": "自然景观",
+                        "day": 2,
+                        "time_block": "Afternoon",
+                        "duration_min": 60,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "15:50-16:50",
+                        "tips": "可携带少量谷物喂食鸽子，拍摄效果更佳",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8100, 38.6350]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 23,
+                        "name_zh": "格雷梅国家公园入口",
+                        "name_local": "Göreme Milli Parkı Girişi",
+                        "category": "自然景观",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 30,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "08:00-10:00",
+                        "tips": "入口处有路线导览图，可提前规划游览路线",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8200, 38.6500]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 24,
+                        "name_zh": "当地面包房",
+                        "name_local": "Yerel Ekmekçilik",
+                        "category": "餐饮",
+                        "day": 2,
+                        "time_block": "Morning",
+                        "duration_min": 30,
+                        "cost_level": 1,
+                        "crowd_level": 1,
+                        "best_time": "07:30-08:00",
+                        "tips": "清晨面包最新鲜，可购买后作为早餐携带",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8255, 38.6488]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 25,
+                        "name_zh": "果汁摊",
+                        "name_local": "Meyve Suyu Satıcısı",
+                        "category": "餐饮",
+                        "day": 1,
+                        "time_block": "Morning",
+                        "duration_min": 30,
+                        "cost_level": 1,
+                        "crowd_level": 2,
+                        "best_time": "12:30-13:00",
+                        "tips": "推荐鲜榨石榴汁，口感醇厚无添加",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8292, 38.6516]
+                    }
+                },
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "id": 26,
+                        "name_zh": "卡帕多奇亚徒步信息站",
+                        "name_local": "Kapadokya Yürüyüş İstasyonu",
+                        "category": "服务设施",
+                        "day": null,
+                        "time_block": null,
+                        "duration_min": 20,
+                        "cost_level": 1,
+                        "crowd_level": 1,
+                        "best_time": "08:00-17:00",
+                        "tips": "可租赁徒步杖、遮阳帽等装备，适配暴走需求",
+                        "must_visit": false
+                    },
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [34.8252, 38.6482]
+                    }
+                }
+            ],
+            "needs_coordinates": [
+                {
+                    "name": "土耳其之夜表演场地",
+                    "approx_address": "格雷梅镇中心周边，靠近游客聚集区",
+                    "note": "已补充近似坐标，实际以当地导航为准"
+                },
+                {
+                    "name": "爱情谷观景台",
+                    "approx_address": "爱情谷入口处高地，可俯瞰整个山谷",
+                    "note": "已补充近似坐标，实际以当地路标为准"
+                },
+                {
+                    "name": "鸽子谷",
+                    "approx_address": "格雷梅镇周边，山谷内遍布鸽子洞穴",
+                    "note": "已补充近似坐标，实际以当地导航为准"
+                },
+                {
+                    "name": "格雷梅国家公园入口",
+                    "approx_address": "格雷梅镇西侧，衔接多个特色山谷",
+                    "note": "已补充近似坐标，实际以当地路标为准"
+                },
+                {
+                    "name": "当地面包房",
+                    "approx_address": "格雷梅镇中心商业街内",
+                    "note": "已补充近似坐标，实际以当地店铺分布为准"
+                },
+                {
+                    "name": "果汁摊",
+                    "approx_address": "格雷梅露天博物馆出口处",
+                    "note": "已补充近似坐标，实际以现场摊位分布为准"
+                },
+                {
+                    "name": "卡帕多奇亚徒步信息站",
+                    "approx_address": "格雷梅巴士站附近",
+                    "note": "已补充近似坐标，实际以当地咨询点为准"
+                },
+                {
+                    "name": "格雷梅镇中心咖啡馆",
+                    "approx_address": "格雷梅镇中心广场周边",
+                    "note": "已补充近似坐标，实际以当地店铺分布为准"
+                },
+                {
+                    "name": "格雷梅镇中心游客中心",
+                    "approx_address": "格雷梅镇中心，靠近巴士站",
+                    "note": "已补充近似坐标，实际以当地标识为准"
+                },
+                {
+                    "name": "乌其萨尔小镇住宿区",
+                    "approx_address": "乌其萨尔城堡周边，小镇核心区域",
+                    "note": "已补充近似坐标，实际以当地酒店分布为准"
+                }
+            ]
+        };
+
+        // 地图加载完成后添加数据源和图层
+        map.on('load', () => {
+            // 添加旅行规划数据源
+            map.addSource('trip-plan', {
+                type: 'geojson',
+                data: tripData
+            });
+
+            // 添加路线线图层
+            map.addLayer({
+                id: 'route-line',
+                type: 'line',
+                source: 'trip-plan',
+                filter: ['==', '$type', 'LineString'],
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': ['case',
+                        ['==', ['get', 'day'], 1], '#ff7f0e',
+                        ['==', ['get', 'day'], 2], '#1f77b4',
+                        '#000000'
+                    ],
+                    'line-width': 4,
+                    'line-opacity': 0.7
+                }
+            });
+
+            // 添加POI点图层
+            map.addLayer({
+                id: 'poi-point',
+                type: 'circle',
+                source: 'trip-plan',
+                filter: ['==', '$type', 'Point'],
+                paint: {
+                    'circle-radius': 6,
+                    'circle-color': ['case',
+                        ['==', ['get', 'category'], '人文遗迹'], '#e31a1c',
+                        ['==', ['get', 'category'], '自然景观'], '#2ca02c',
+                        ['==', ['get', 'category'], '餐饮'], '#ff7f0e',
+                        ['==', ['get', 'category'], '观景点'], '#1f77b4',
+                        ['==', ['get', 'category'], '购物'], '#9467bd',
+                        ['==', ['get', 'category'], '交通枢纽'], '#8c564b',
+                        ['==', ['get', 'category'], '住宿区'], '#e377c2',
+                        ['==', ['get', 'category'], '人文遗迹（雨天备选）'], '#aec7e8',
+                        ['==', ['get', 'category'], '服务设施'], '#ffbb78',
+                        ['==', ['get', 'category'], '夜间活动'], '#2ca02c',
+                        ['==', ['get', 'category'], '服务设施（雨天备选）'], '#d62728',
+                        '#000000'
+                    ],
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            // 添加POI弹窗（修正核心语法错误）
+            map.on('click', 'poi-point', (e) => {
+                const properties = e.features[0].properties;
+                const popupContent = `
+                    <h3>${properties.name_zh}</h3>
+                    <p>当地名称：${properties.name_local}</p>
+                    <p>类别：${properties.category}</p>
+                    ${properties.day ? `<p>游览天数：Day ${properties.day}</p>` : ''}
+                    ${properties.time_block ? `<p>时段：${properties.time_block}</p>` : ''}
+                    ${properties.duration_min ? `<p>停留时间：${properties.duration_min}分钟</p>` : ''}
+                    <p>推荐时间：${properties.best_time}</p>
+                    <p>小贴士：${properties.tips}</p>
+                `;
+                new maplibregl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(popupContent)
+                    .addTo(map);
+            });
+
+            map.on('mouseenter', 'poi-point', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'poi-point', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // 过滤功能实现
+            const dayFilter = document.getElementById('day-filter');
+            const categoryFilter = document.getElementById('category-filter');
+
+            function updateFilter() {
+                const day = dayFilter.value;
+                const category = categoryFilter.value;
+                let filters = [
+                    'all',
+                    ['==', '$type', 'Point']
+                ];
+
+                if (day !== 'all') {
+                    filters.push(['==', ['get', 'day'], parseInt(day)]);
+                }
+
+                if (category !== 'all') {
+                    filters.push(['==', ['get', 'category'], category]);
+                }
+
+                map.setFilter('poi-point', filters);
+
+                // 路线过滤
+                let routeFilters = ['==', '$type', 'LineString'];
+                if (day !== 'all') {
+                    routeFilters = ['all', routeFilters, ['==', ['get', 'day'], parseInt(day)]];
+                }
+                map.setFilter('route-line', routeFilters);
+            }
+
+            dayFilter.addEventListener('change', updateFilter);
+            categoryFilter.addEventListener('change', updateFilter);
+
+            // 添加地图控件
+            map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        });
+    </script>
+</body>
+</html>
